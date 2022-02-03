@@ -4,6 +4,8 @@ import figlet from 'figlet-promised';
 import gradient from 'gradient-string';
 import inquirer from 'inquirer';
 import Table from 'cli-table';
+import ora from 'ora';
+
 import { searchItems } from './requests.js';
 
 const table = new Table({
@@ -43,7 +45,10 @@ async function askSearchQuery(): Promise<string> {
  */
 async function search() {
   const query = await askSearchQuery();
+  const spinner = ora('Requesting item data').start();
+
   const request = await searchItems(query);
+  spinner.stop();
 
   if (request.length > 1) {
     // select item from list
@@ -89,6 +94,7 @@ async function menu() {
     ],
   });
 
+  // TODO: improve this
   switch (command.selected) {
     case '🔎 Search Items':
       await search();
