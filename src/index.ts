@@ -4,6 +4,7 @@ import figlet from 'figlet-promised';
 import gradient from 'gradient-string';
 import inquirer from 'inquirer';
 import Table from 'cli-table';
+import ora from 'ora';
 
 import { ItemSearchResult } from 'tarki-definitions';
 import { searchItems } from './requests.js';
@@ -14,11 +15,17 @@ const table = new Table({
     'Market Price',
     'Trader Price',
     'Quests',
-    'Crafts',
-    'Barters',
+    //'Crafts',
+    //'Barters',
     'Upgrades',
   ],
-  colWidths: [20, 20, 20, 20, 20, 20, 20],
+  colWidths: [25, 25, 25, 25, 25, 25, 25],
+});
+
+const formatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'RUB',
+  maximumSignificantDigits: 1,
 });
 
 /**
@@ -53,40 +60,49 @@ async function askSearchQuery(): Promise<string> {
  */
 async function search() {
   const query = await askSearchQuery();
+  const spinner = ora('Requesting item data').start();
+
   const request = await searchItems(query);
+  spinner.stop();
 
   if (request.length > 1) {
     // select item from list
   }
 
   const item = request[0];
+  if (!item) return;
+
   addItemToTable(item);
 }
 
 function addItemToTable(item: ItemSearchResult) {
+  const marketPrice =
+    item.prices.market.price > 0
+      ? formatter.format(item.prices.market.price)
+      : 'Cannot be sold';
+
   const quests = item.quests
     .map((q) => `${q.itemQty}x for ${q.title}`)
     .join('\n');
 
+  //const crafts = '';
+  //const barters = ''; //item.barters.map((b) => `${b.rewardItems}`).join('\n');
+
+  const upgrades = item.hideoutUpgrades
+    .map((u) => `${u.name} level ${u.level}`)
+    .join('\n');
+
   table.push([
     item.itemName,
-    `${item.prices.market.price} RUB`,
-    `${item.prices.trader.price} RUB @ ${item.prices.trader.name}`,
+    marketPrice,
+    `${formatter.format(item.prices.trader.price)} @ ${
+      item.prices.trader.name
+    }`,
     quests,
-    'Crafts',
-    'Barters',
-    'Upgrades',
+    //crafts,
+    //barters,
+    upgrades,
   ]);
-}
-
-async function test() {
-  const a = await inquirer.prompt({
-    name: 'test',
-    type: 'input',
-    message: 'Type comma-separated items: ',
-  });
-
-  table.push([a.test, '', '']);
 }
 
 /**
@@ -99,23 +115,16 @@ async function menu() {
     name: 'selected',
     type: 'list',
     message: 'What would you like to do? \n',
-    choices: [
-      '🔎 Search Items',
-      '🧼 Clear Table',
-      '🔨 Test command',
-      '❌ Quit CLI',
-    ],
+    choices: ['🔎 Search Items', '🧼 Clear Table', '❌ Quit CLI'],
   });
 
+  // TODO: improve this
   switch (command.selected) {
     case '🔎 Search Items':
       await search();
       break;
     case '🧼 Clear Table':
       table.splice(0, table.length);
-      break;
-    case '🔨 Test command':
-      await test();
       break;
     case '❌ Quit CLI':
       process.exit(0);
