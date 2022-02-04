@@ -4,11 +4,21 @@ import figlet from 'figlet-promised';
 import gradient from 'gradient-string';
 import inquirer from 'inquirer';
 import Table from 'cli-table';
+
+import { ItemSearchResult } from 'tarki-definitions';
 import { searchItems } from './requests.js';
 
 const table = new Table({
-  head: ['Name', 'Market Price', 'Trader Price'],
-  colWidths: [20, 20, 20],
+  head: [
+    'Name',
+    'Market Price',
+    'Trader Price',
+    'Quests',
+    'Crafts',
+    'Barters',
+    'Upgrades',
+  ],
+  colWidths: [20, 20, 20, 20, 20, 20, 20],
 });
 
 /**
@@ -18,7 +28,7 @@ async function welcome() {
   console.clear();
 
   const text = await figlet(`Tarki`);
-  console.log(gradient.passion.multiline(text) + '\n');
+  console.log(gradient.passion.multiline(text));
 
   console.log(table.toString());
 }
@@ -31,7 +41,7 @@ async function askSearchQuery(): Promise<string> {
   const prompt = await inquirer.prompt({
     name: 'search_query',
     type: 'input',
-    message: 'Searched item: ',
+    message: 'Search query: ',
   });
 
   return prompt.search_query;
@@ -50,25 +60,33 @@ async function search() {
   }
 
   const item = request[0];
+  addItemToTable(item);
+}
+
+function addItemToTable(item: ItemSearchResult) {
+  const quests = item.quests
+    .map((q) => `${q.itemQty}x for ${q.title}`)
+    .join('\n');
 
   table.push([
     item.itemName,
-    item.prices.market.price,
-    `${item.prices.trader.price} @ ${item.prices.trader.name}`,
+    `${item.prices.market.price} RUB`,
+    `${item.prices.trader.price} RUB @ ${item.prices.trader.name}`,
+    quests,
+    'Crafts',
+    'Barters',
+    'Upgrades',
   ]);
 }
 
 async function test() {
   const a = await inquirer.prompt({
     name: 'test',
-    type: 'list',
-    message: 'Type comma-separated items',
+    type: 'input',
+    message: 'Type comma-separated items: ',
   });
 
-  console.log(a);
-
-  // TODO: use enquirer instead of inquierer
-  // TODO: use autocomplete for items
+  table.push([a.test, '', '']);
 }
 
 /**
@@ -84,7 +102,7 @@ async function menu() {
     choices: [
       '🔎 Search Items',
       '🧼 Clear Table',
-      'Test command',
+      '🔨 Test command',
       '❌ Quit CLI',
     ],
   });
@@ -96,7 +114,7 @@ async function menu() {
     case '🧼 Clear Table':
       table.splice(0, table.length);
       break;
-    case 'Test command':
+    case '🔨 Test command':
       await test();
       break;
     case '❌ Quit CLI':
